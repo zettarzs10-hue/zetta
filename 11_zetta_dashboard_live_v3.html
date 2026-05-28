@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZETTA · Dashboard Live · Tiempo Real</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070a0f;--surface:#0d1117;--surface2:#131920;--border:#1e2a35;--accent:#00d4a8;--red:#ff4757;--green:#00d4a8;--yellow:#f5a623;--muted:#4a6070;--text:#c8d8e4;--dim:#6b8090;--white:#e8f2f8;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;min-height:100vh;}
+.container{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
+header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+.logo h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--white);}
+.logo h1 span{color:var(--accent);}
+.logo p{font-size:10px;color:var(--dim);margin-top:3px;letter-spacing:.08em;text-transform:uppercase;}
+.status-right{text-align:right;}
+.live-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,168,.08);border:1px solid rgba(0,212,168,.3);color:var(--accent);padding:4px 12px;border-radius:2px;font-size:10px;letter-spacing:.1em;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.ts{font-size:10px;color:var(--dim);margin-top:5px;}
+.countdown{font-size:9px;color:var(--accent);margin-top:2px;}
+
+/* STATUS BAR */
+.status-bar{display:flex;align-items:center;gap:10px;background:rgba(0,212,168,.04);border:1px solid rgba(0,212,168,.15);border-radius:4px;padding:10px 14px;margin-bottom:20px;font-size:11px;}
+.spinner{width:14px;height:14px;border:2px solid rgba(0,212,168,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.status-bar.error{background:rgba(255,71,87,.04);border-color:rgba(255,71,87,.25);color:var(--red);}
+.status-bar.ok{background:rgba(0,212,168,.04);border-color:rgba(0,212,168,.2);color:var(--accent);}
+.retry-btn{margin-left:auto;background:rgba(255,71,87,.15);border:1px solid rgba(255,71,87,.3);color:var(--red);padding:4px 10px;border-radius:2px;cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:.05em;}
+
+.section-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);padding-bottom:7px;margin-bottom:16px;}
+
+/* PRICE GRID */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);margin-bottom:28px;}
+@media(max-width:700px){.price-grid{grid-template-columns:1fr;}}
+.asset-card{background:var(--surface);padding:18px;border-top:2px solid var(--muted);transition:border-color .3s;}
+.asset-card.up{border-top-color:var(--green);}
+.asset-card.down{border-top-color:var(--red);}
+.asset-card.loading-card{border-top-color:var(--muted);}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.asset-id{font-size:9px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;margin-bottom:2px;}
+.asset-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--white);}
+.sig{font-size:9px;padding:3px 7px;border-radius:2px;white-space:nowrap;}
+.sig.buy{background:rgba(0,212,168,.12);color:var(--green);border:1px solid rgba(0,212,168,.25);}
+.sig.wait{background:rgba(74,96,112,.15);color:var(--dim);border:1px solid var(--border);}
+.sig.caut{background:rgba(245,166,35,.1);color:var(--yellow);border:1px solid rgba(245,166,35,.25);}
+.price-main{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--white);line-height:1;margin-bottom:4px;}
+.price-main.loading{color:var(--muted);font-size:18px;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+.price-chg{font-size:11px;margin-bottom:8px;}
+.up-txt{color:var(--green);}
+.dn-txt{color:var(--red);}
+.neutral-txt{color:var(--dim);}
+.price-meta{font-size:9px;color:var(--dim);line-height:1.5;margin-bottom:10px;}
+.meta-row{display:flex;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--border);margin-bottom:8px;}
+.meta-row span{flex:1;min-width:65px;padding:6px 8px;font-size:9px;color:var(--dim);border-right:1px solid var(--border);display:flex;flex-direction:column;gap:1px;}
+.meta-row span:last-child{border-right:none;}
+.meta-row b{color:var(--white);font-size:10px;}
+.lvl-bar{display:flex;gap:2px;margin-bottom:8px;}
+.lvl{flex:1;padding:5px 7px;font-size:9px;text-align:center;border-radius:2px;display:flex;flex-direction:column;gap:1px;}
+.lvl b{font-size:10px;}
+.lvl.stop{background:rgba(255,71,87,.08);color:var(--red);border:1px solid rgba(255,71,87,.18);}
+.lvl.tp1{background:rgba(0,212,168,.07);color:var(--green);border:1px solid rgba(0,212,168,.18);}
+.lvl.tp2{background:rgba(0,212,168,.04);color:var(--green);border:1px solid rgba(0,212,168,.12);}
+.macro{font-size:10px;color:var(--dim);line-height:1.5;padding-top:7px;border-top:1px solid var(--border);}
+
+/* ESTRATEGIAS */
+.strat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);margin-bottom:28px;}
+@media(max-width:700px){.strat-grid{grid-template-columns:1fr;}}
+.strat-card{background:var(--surface);padding:18px;}
+.strat-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.strat-id{font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:2px;}
+.strat-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--white);}
+.wr{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--accent);text-align:right;}
+.wr small{font-size:9px;color:var(--dim);display:block;text-align:right;}
+.srow{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);}
+.srow span{color:var(--dim);}
+.srow b{color:var(--white);}
+
+/* REGLAS */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--border);margin-bottom:28px;}
+@media(max-width:700px){.rules{grid-template-columns:1fr;}}
+.rule-card{background:var(--surface);padding:18px;}
+.rule-card h3{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--white);margin-bottom:10px;}
+.ri{display:flex;gap:7px;margin-bottom:6px;font-size:11px;color:var(--dim);line-height:1.5;}
+.ri .b{color:var(--accent);flex-shrink:0;}
+.ri strong{color:var(--text);}
+
+/* PnL */
+.pnl{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--border);margin-bottom:28px;}
+@media(max-width:700px){.pnl{grid-template-columns:1fr 1fr;}}
+.pnl-c{background:var(--surface);padding:18px;}
+.pnl-lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+.pnl-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green);}
+.pnl-sub{font-size:9px;color:var(--dim);margin-top:4px;line-height:1.5;}
+
+/* HORARIO */
+.horario{background:var(--surface);border:1px solid var(--border);padding:18px;margin-bottom:28px;}
+.hora-list{display:flex;overflow-x:auto;gap:0;}
+.hora-item{flex:1;min-width:105px;padding:10px 14px;border-right:1px solid var(--border);position:relative;}
+.hora-item:last-child{border-right:none;}
+.hora-item.active{background:rgba(0,212,168,.06);}
+.hora-item.active::before{content:'AHORA';position:absolute;top:5px;right:7px;font-size:7px;color:var(--accent);letter-spacing:.1em;}
+.hora-time{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--white);margin-bottom:3px;}
+.hora-desc{font-size:9px;color:var(--dim);line-height:1.4;}
+
+footer{border-top:1px solid var(--border);padding-top:16px;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);}
+footer span.v{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="logo">
+    <h1>ZETTA <span>TRADING</span></h1>
+    <p>Dashboard Live · Precios en tiempo real · CDMX UTC−6</p>
+  </div>
+  <div class="status-right">
+    <div class="live-badge"><span class="dot"></span><span id="mkt-status">CARGANDO</span></div>
+    <div class="ts" id="last-ts">Conectando...</div>
+    <div class="countdown" id="cd"></div>
+  </div>
+</header>
+
+<div class="status-bar" id="sbar">
+  <div class="spinner" id="spinner"></div>
+  <span id="sbar-msg">Obteniendo precios vía Yahoo Finance...</span>
+  <button class="retry-btn" onclick="init()" style="display:none" id="retry-btn">↺ REINTENTAR</button>
+</div>
+
+<div class="section-label" id="grid-label">7 activos · Cargando precios en tiempo real...</div>
+<div class="price-grid">
+
+  <!-- US30 -->
+  <div class="asset-card loading-card" id="card-US30">
+    <div class="card-top">
+      <div><div class="asset-id">01 · US30</div><div class="asset-name">Dow Jones</div></div>
+      <span class="sig wait">E1 · ORS</span>
+    </div>
+    <div class="price-main loading" id="p-US30">—</div>
+    <div class="price-chg neutral-txt" id="c-US30">cargando...</div>
+    <div class="price-meta" id="m-US30">Obteniendo datos de mercado...</div>
+    <div class="meta-row"><span>Apalancamiento<b>20:1</b></span><span>Margen<b>$143</b></span><span>Exposición<b>$2,860</b></span><span>100pts=<b>+$28</b></span></div>
+    <div class="lvl-bar"><div class="lvl stop">STOP<b>−50pts</b></div><div class="lvl tp1">TP1<b>+150pts</b></div><div class="lvl tp2">TP2<b>+300pts</b></div></div>
+    <div class="macro">E1 ORS: marca H/L primeros 15 min tras apertura 08:30 CDMX · Breakout M5 con volumen · MA50: 48,246 · MA200: 47,606</div>
+  </div>
+
+  <!-- EUR/USD -->
+  <div class="asset-card loading-card" id="card-EURUSD">
+    <div class="card-top">
+      <div><div class="asset-id">02 · EUR/USD</div><div class="asset-name">The Fiber</div></div>
+      <span class="sig buy">E2 · LONG</span>
+    </div>
+    <div class="price-main loading" id="p-EURUSD">—</div>
+    <div class="price-chg neutral-txt" id="c-EURUSD">cargando...</div>
+    <div class="price-meta" id="m-EURUSD">Obteniendo datos de mercado...</div>
+    <div class="meta-row"><span>Apalancamiento<b>30:1</b></span><span>Margen<b>$143</b></span><span>Exposición<b>$4,290</b></span><span>10pips=<b>+$4.29</b></span></div>
+    <div class="lvl-bar"><div class="lvl stop">STOP<b>10-12pips</b></div><div class="lvl tp1">TP1<b>+25pips</b></div><div class="lvl tp2">TP2<b>+40pips</b></div></div>
+    <div class="macro">E2 EMA Pullback M5 · Soporte EMA50 · Bullish si rompe 1.1660 · RSI zona neutral</div>
+  </div>
+
+  <!-- NVDA -->
+  <div class="asset-card loading-card" id="card-NVDA">
+    <div class="card-top">
+      <div><div class="asset-id">03 · NVDA</div><div class="asset-name">NVIDIA Corp</div></div>
+      <span class="sig wait">ESPERAR DIP</span>
+    </div>
+    <div class="price-main loading" id="p-NVDA">—</div>
+    <div class="price-chg neutral-txt" id="c-NVDA">cargando...</div>
+    <div class="price-meta" id="m-NVDA">Obteniendo datos de mercado...</div>
+    <div class="meta-row"><span>Apalancamiento<b>5:1</b></span><span>Margen<b>$143</b></span><span>Exposición<b>$715</b></span><span>$1=<b>+$3.33</b></span></div>
+    <div class="lvl-bar"><div class="lvl stop">STOP<b>$203</b></div><div class="lvl tp1">TP1<b>$228</b></div><div class="lvl tp2">TP2<b>$255</b></div></div>
+    <div class="macro">MA50: $196.81 · MA200: $187.03 · Dip ideal $210–213 · Jensen: "demanda IA parabólica"</div>
+  </div>
+
+  <!-- APP -->
+  <div class="asset-card loading-card" id="card-APP">
+    <div class="card-top">
+      <div><div class="asset-id">04 · APP 👁</div><div class="asset-name">AppLovin Corp</div></div>
+      <span class="sig buy">E2 · WATCH</span>
+    </div>
+    <div class="price-main loading" id="p-APP">—</div>
+    <div class="price-chg neutral-txt" id="c-APP">cargando...</div>
+    <div class="price-meta" id="m-APP">Obteniendo datos de mercado...</div>
+    <div class="meta-row"><span>Apalancamiento<b>5:1</b></span><span>Margen<b>$143</b></span><span>Exposición<b>$715</b></span><span>$10=<b>+$14.73</b></span></div>
+    <div class="lvl-bar"><div class="lvl stop">STOP<b>$462</b></div><div class="lvl tp1">TP1<b>$520</b></div><div class="lvl tp2">TP2<b>$580</b></div></div>
+    <div class="macro">UBS/Wedbush/DB Buy · Axon ecommerce jun 2026 · 52w: $320–$745 · Avg analistas: $644</div>
+  </div>
+
+  <!-- GOLD -->
+  <div class="asset-card loading-card" id="card-GOLD">
+    <div class="card-top">
+      <div><div class="asset-id">05 · XAU/USD</div><div class="asset-name">Gold Spot</div></div>
+      <span class="sig wait">NEUTRAL</span>
+    </div>
+    <div class="price-main loading" id="p-GOLD">—</div>
+    <div class="price-chg neutral-txt" id="c-GOLD">cargando...</div>
+    <div class="price-meta" id="m-GOLD">Obteniendo datos de mercado...</div>
+    <div class="meta-row"><span>Apalancamiento<b>10:1</b></span><span>Margen<b>$143</b></span><span>Exposición<b>$1,430</b></span><span>$10=<b>+$3.17</b></span></div>
+    <div class="lvl-bar"><div class="lvl stop">STOP<b>−$25</b></div><div class="lvl tp1">TP1<b>+$55</b></div><div class="lvl tp2">TP2<b>+$100</b></div></div>
+    <div class="macro">Irán reapertura Hormuz → presión bajista · Soporte: $4,350 · No Long sin confirmar rebote</div>
+  </div>
+
+  <!-- OIL -->
+  <div class="asset-card loading-card" id="card-OIL">
+    <div class="card-top">
+      <div><div class="asset-id">06 · WTI OIL</div><div class="asset-name">Crude Spot</div></div>
+      <span class="sig caut">E3 · MIÉRCOLES</span>
+    </div>
+    <div class="price-main loading" id="p-OIL">—</div>
+    <div class="price-chg neutral-txt" id="c-OIL">cargando...</div>
+    <div class="price-meta" id="m-OIL">Obteniendo datos de mercado...</div>
+    <div class="meta-row"><span>Apalancamiento<b>10:1</b></span><span>Margen<b>$143</b></span><span>Exposición<b>$1,430</b></span><span>$1=<b>+$15.72</b></span></div>
+    <div class="lvl-bar"><div class="lvl stop">STOP<b>$87.50</b></div><div class="lvl tp1">TP1<b>$96</b></div><div class="lvl tp2">TP2<b>$100</b></div></div>
+    <div class="macro">Irán reapertura Hormuz → presión WTI · E3 solo miércoles 07:30 AM · Fib 38.2%: $88.36</div>
+  </div>
+
+  <!-- COPPER -->
+  <div class="asset-card loading-card" id="card-COPPER">
+    <div class="card-top">
+      <div><div class="asset-id">07 · COPPER HG 👁</div><div class="asset-name">Cobre Futuros</div></div>
+      <span class="sig buy">STRONG BUY</span>
+    </div>
+    <div class="price-main loading" id="p-COPPER">—</div>
+    <div class="price-chg neutral-txt" id="c-COPPER">cargando...</div>
+    <div class="price-meta" id="m-COPPER">Obteniendo datos de mercado...</div>
+    <div class="meta-row"><span>Apalancamiento<b>10:1</b></span><span>Margen<b>$143</b></span><span>Exposición<b>$1,430</b></span><span>Stop<b>$5.95</b></span></div>
+    <div class="lvl-bar"><div class="lvl stop">STOP<b>$5.95</b></div><div class="lvl tp1">TP1<b>$6.60</b></div><div class="lvl tp2">TP2<b>$6.80</b></div></div>
+    <div class="macro">Strong Buy todos los TF · +35% YoY · Demanda IA · Soporte $6.28 · Citi target: $15,000/ton</div>
+  </div>
+
+</div>
+
+<!-- ESTRATEGIAS -->
+<div class="section-label">3 estrategias operativas activas</div>
+<div class="strat-grid">
+  <div class="strat-card">
+    <div class="strat-hdr"><div><div class="strat-id">E1 · M1/M5 · US30</div><div class="strat-name">Opening Range Scalp</div></div><div><div class="wr">58%</div><small>win rate</small></div></div>
+    <div class="srow"><span>Activo</span><b>US30 · 20:1</b></div>
+    <div class="srow"><span>Ventana CDMX</span><b>07:30–11:30 AM</b></div>
+    <div class="srow"><span>Setup</span><b>H/L 07:45 · Breakout M5</b></div>
+    <div class="srow"><span>Stop / TP1</span><b>50pts / +150pts</b></div>
+    <div class="srow"><span>R/R</span><b>1:3.0</b></div>
+    <div class="srow"><span>Ganancia TP1</span><b style="color:var(--green)">+$42</b></div>
+    <div class="srow"><span>Pérdida stop</span><b style="color:var(--red)">−$14</b></div>
+    <div class="srow"><span>KPI semanal</span><b>+$80–140</b></div>
+  </div>
+  <div class="strat-card">
+    <div class="strat-hdr"><div><div class="strat-id">E2 · M5 · Multi-activo</div><div class="strat-name">EMA Pullback Scalp</div></div><div><div class="wr">62%</div><small>win rate</small></div></div>
+    <div class="srow"><span>Activos</span><b>EUR/USD · Gold · APP</b></div>
+    <div class="srow"><span>Ventana CDMX</span><b>07:30–10:30 AM</b></div>
+    <div class="srow"><span>Setup</span><b>EMA21 + RSI 40–65</b></div>
+    <div class="srow"><span>Stop / TP1</span><b>3–4pips / 2× stop</b></div>
+    <div class="srow"><span>R/R</span><b>1:2.5</b></div>
+    <div class="srow"><span>EUR/USD TP1</span><b style="color:var(--green)">+$107</b></div>
+    <div class="srow"><span>Gold TP1</span><b style="color:var(--green)">+$79</b></div>
+    <div class="srow"><span>KPI semanal</span><b>+$90–160</b></div>
+  </div>
+  <div class="strat-card">
+    <div class="strat-hdr"><div><div class="strat-id">E3 · M5 · Oil · Miércoles</div><div class="strat-name">EIA Oil Event Scalp</div></div><div><div class="wr">65%</div><small>win rate</small></div></div>
+    <div class="srow"><span>Activo</span><b>WTI Oil · 10:1</b></div>
+    <div class="srow"><span>Cuándo</span><b>Solo miércoles 07:30 AM</b></div>
+    <div class="srow"><span>Flujo</span><b>Spike→07:33 obs→07:35 entra</b></div>
+    <div class="srow"><span>Inv.bajan</span><b>LONG · Stop $87.50 · TP1 $96</b></div>
+    <div class="srow"><span>Inv.suben</span><b>SHORT · Stop $93</b></div>
+    <div class="srow"><span>Ganancia TP1</span><b style="color:var(--green)">+$79</b></div>
+    <div class="srow"><span>R/R</span><b>1:2.2</b></div>
+    <div class="srow"><span>KPI</span><b>+$40–80/sem</b></div>
+  </div>
+</div>
+
+<!-- REGLAS -->
+<div class="section-label">Reglas de gestión · No negociables</div>
+<div class="rules">
+  <div class="rule-card">
+    <h3>🛑 Stop Loss</h3>
+    <div class="ri"><span class="b">→</span><span>Stop <strong>SIEMPRE</strong> antes de entrar.</span></div>
+    <div class="ri"><span class="b">→</span><span>US30 20:1 → stop máx <strong>430 pts</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>Forex 30:1 → stop máx <strong>12 pips</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>Gold/Oil 10:1 → stop máx <strong>$25–30</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>APP/NVDA 5:1 → stop máx <strong>−6%</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>Pérdida máx diaria: <strong>$50 → para</strong></span></div>
+    <div class="ri"><span class="b">→</span><span><strong>3 stops seguidos</strong> → descansa</span></div>
+  </div>
+  <div class="rule-card">
+    <h3>📐 Gestión de posición</h3>
+    <div class="ri"><span class="b">→</span><span>R/R mínimo <strong>1:2</strong> antes de entrar.</span></div>
+    <div class="ri"><span class="b">→</span><span>Cierra <strong>50% en TP1</strong> siempre.</span></div>
+    <div class="ri"><span class="b">→</span><span>50% restante: <strong>trailing stop.</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>Breakeven cuando: <strong>+1.5× el riesgo.</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>Máx posiciones simultáneas: <strong>3</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>Target $40–60 alcanzado: <strong>cierra.</strong></span></div>
+    <div class="ri"><span class="b">→</span><span>Nunca más del <strong>70% en margen.</strong></span></div>
+  </div>
+</div>
+
+<!-- PnL -->
+<div class="section-label">Proyección rentabilidad · $1,000 demo</div>
+<div class="pnl">
+  <div class="pnl-c"><div class="pnl-lbl">Día tipo</div><div class="pnl-val">+$35</div><div class="pnl-sub">US30+$42 · EUR+$34 · Gold+$18 · Stop−$14</div></div>
+  <div class="pnl-c"><div class="pnl-lbl">Mes 1</div><div class="pnl-val">+22–32%</div><div class="pnl-sub">~$1,320–$1,380 · 22 días</div></div>
+  <div class="pnl-c"><div class="pnl-lbl">Mes 3</div><div class="pnl-val">+70–100%</div><div class="pnl-sub">~$1,700–$2,000 compuesto</div></div>
+  <div class="pnl-c"><div class="pnl-lbl">Meta demo→real</div><div class="pnl-val">60 días</div><div class="pnl-sub">3 semanas consecutivas rentables</div></div>
+</div>
+
+<!-- HORARIO -->
+<div class="section-label">Horario operativo CDMX · UTC−6</div>
+<div class="horario">
+  <div class="hora-list">
+    <div class="hora-item" id="h1"><div class="hora-time">07:00</div><div class="hora-desc">Preparación · Calendario</div></div>
+    <div class="hora-item" id="h2"><div class="hora-time">07:30</div><div class="hora-desc">NY abre · 15min obs.</div></div>
+    <div class="hora-item" id="h3"><div class="hora-time">07:45</div><div class="hora-desc">H/L US30 · ORS setup</div></div>
+    <div class="hora-item" id="h4"><div class="hora-time">07:45–10:30</div><div class="hora-desc">⚡ VENTANA PRINCIPAL</div></div>
+    <div class="hora-item" id="h5"><div class="hora-time">10:30–11:30</div><div class="hora-desc">Gestión · Trailing</div></div>
+    <div class="hora-item" id="h6"><div class="hora-time">11:30</div><div class="hora-desc">Cierra todos scalps</div></div>
+    <div class="hora-item" id="h7"><div class="hora-time">12:00+</div><div class="hora-desc">No scalps nuevos</div></div>
+  </div>
+</div>
+
+<footer>
+  <span>Zetta Trading · Demo Capital.com · No es asesoramiento financiero</span>
+  <span class="v" id="fv">v12 · Tiempo Real · Yahoo Finance</span>
+</footer>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// ZETTA DASHBOARD LIVE v12
+// Proxy: corsproxy.io (funciona desde browser)
+// Fuente: Yahoo Finance
+// ═══════════════════════════════════════════════
+
+const TICKERS = {
+  'US30':   { sym: '^DJI',    dec: 0,  prefix: '' },
+  'EURUSD': { sym: 'EURUSD=X',dec: 4,  prefix: '' },
+  'NVDA':   { sym: 'NVDA',   dec: 2,  prefix: '$' },
+  'APP':    { sym: 'APP',    dec: 2,  prefix: '$' },
+  'GOLD':   { sym: 'GC=F',   dec: 2,  prefix: '$' },
+  'OIL':    { sym: 'CL=F',   dec: 2,  prefix: '$' },
+  'COPPER': { sym: 'HG=F',   dec: 4,  prefix: '$' },
+};
+
+// Múltiples proxies CORS — se intentan en orden
+const PROXY_LIST = [
+  (sym) => `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`)}`,
+  (sym) => `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`)}`,
+  (sym) => `https://thingproxy.freeboard.io/fetch/https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`,
+];
+
+let cdTimer = null;
+
+function n(val, dec, prefix='') {
+  if (!val || isNaN(val)) return '—';
+  return prefix + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits:dec, maximumFractionDigits:dec});
+}
+
+async function fetchTicker(key) {
+  const t = TICKERS[key];
+  for (let i = 0; i < PROXY_LIST.length; i++) {
+    try {
+      const url = PROXY_LIST[i](t.sym);
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (!meta) continue;
+      return {
+        ok: true,
+        price: meta.regularMarketPrice,
+        prev:  meta.previousClose || meta.chartPreviousClose,
+        high:  meta.regularMarketDayHigh,
+        low:   meta.regularMarketDayLow,
+        open:  meta.regularMarketOpen,
+      };
+    } catch(e) { continue; }
+  }
+  return { ok: false };
+}
+
+function updateCard(key, d) {
+  const t = TICKERS[key];
+  const pEl = document.getElementById(`p-${key}`);
+  const cEl = document.getElementById(`c-${key}`);
+  const mEl = document.getElementById(`m-${key}`);
+  const card = document.getElementById(`card-${key}`);
+
+  if (!d.ok) {
+    pEl.textContent = 'N/D';
+    cEl.textContent = 'Sin datos';
+    mEl.textContent = 'No se pudo conectar. Revisa tu conexión.';
+    return;
+  }
+
+  const change = d.price - d.prev;
+  const pct    = (change / d.prev) * 100;
+  const isUp   = change >= 0;
+  const sign   = isUp ? '+' : '';
+
+  pEl.textContent = n(d.price, t.dec, t.prefix);
+  pEl.classList.remove('loading');
+  pEl.style.color = isUp ? 'var(--green)' : 'var(--red)';
+
+  cEl.textContent = `${isUp?'▲':'▼'} ${sign}${n(Math.abs(change), t.dec, t.prefix)} (${sign}${pct.toFixed(2)}%)`;
+  cEl.className   = `price-chg ${isUp ? 'up-txt' : 'dn-txt'}`;
+
+  mEl.textContent = `Prev. cierre: ${n(d.prev, t.dec, t.prefix)} · Rango: ${n(d.low, t.dec, t.prefix)}–${n(d.high, t.dec, t.prefix)} · Open: ${n(d.open, t.dec, t.prefix)}`;
+
+  card.classList.remove('loading-card','up','down');
+  card.classList.add(isUp ? 'up' : 'down');
+}
+
+function setStatus(type, msg) {
+  const bar = document.getElementById('sbar');
+  const msgEl = document.getElementById('sbar-msg');
+  const spinEl = document.getElementById('spinner');
+  const retryEl = document.getElementById('retry-btn');
+  bar.className = `status-bar ${type}`;
+  msgEl.textContent = msg;
+  spinEl.style.display = type === 'loading' ? 'block' : 'none';
+  retryEl.style.display = type === 'error' ? 'inline-block' : 'none';
+}
+
+function updateMarketStatus() {
+  const now    = new Date();
+  const cdmx   = new Date(now.toLocaleString('en-US', {timeZone:'America/Mexico_City'}));
+  const h      = cdmx.getHours() + cdmx.getMinutes()/60;
+  const day    = cdmx.getDay();
+  const timeStr= cdmx.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const dateStr= cdmx.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
+
+  document.getElementById('last-ts').textContent = `Actualizado: ${timeStr} · ${dateStr}`;
+  document.getElementById('fv').textContent = `v12 · Tiempo Real · ${timeStr} CDMX`;
+  document.getElementById('grid-label').textContent = `7 activos · Último update: ${timeStr} CDMX`;
+
+  const isWeekend = day===0||day===6;
+  const mktOpen   = h>=8.5 && h<15 && !isWeekend;
+
+  document.getElementById('mkt-status').textContent =
+    isWeekend ? 'MERCADO CERRADO · WEEKEND' :
+    mktOpen   ? 'MERCADO ABIERTO · NY' :
+    h < 8.5   ? `PRE-MARKET · Abre ${(8.5-h).toFixed(1)}h` :
+                'MERCADO CERRADO · NY';
+
+  // Marcar ventana activa horario
+  ['h1','h2','h3','h4','h5','h6','h7'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  if      (h>=7&&h<7.5)    document.getElementById('h1')?.classList.add('active');
+  else if (h>=7.5&&h<7.75) document.getElementById('h2')?.classList.add('active');
+  else if (h>=7.75&&h<10.5)document.getElementById('h4')?.classList.add('active');
+  else if (h>=10.5&&h<11.5)document.getElementById('h5')?.classList.add('active');
+  else if (h>=11.5&&h<12)  document.getElementById('h6')?.classList.add('active');
+  else if (h>=12)          document.getElementById('h7')?.classList.add('active');
+}
+
+function startCountdown(secs) {
+  if (cdTimer) clearInterval(cdTimer);
+  const el = document.getElementById('cd');
+  let s = secs;
+  cdTimer = setInterval(() => {
+    s--;
+    el.textContent = s > 0 ? `↺ Actualiza en ${s}s` : '↺ Actualizando...';
+    if (s <= 0) { clearInterval(cdTimer); init(); }
+  }, 1000);
+}
+
+async function init() {
+  setStatus('loading', 'Obteniendo precios vía Yahoo Finance...');
+  updateMarketStatus();
+
+  const keys = Object.keys(TICKERS);
+  let ok = 0;
+
+  await Promise.allSettled(keys.map(async key => {
+    const d = await fetchTicker(key);
+    updateCard(key, d);
+    if (d.ok) ok++;
+  }));
+
+  if (ok === 0) {
+    setStatus('error', `No se pudo conectar a Yahoo Finance. Puede ser CORS o sin internet. Intenta con VPN o extensión "Allow CORS".`);
+  } else if (ok < keys.length) {
+    setStatus('ok', `${ok}/${keys.length} activos cargados. Algunos fallan — intenta reintentar.`);
+  } else {
+    setStatus('ok', `✅ ${ok} activos actualizados. Próximo refresh en 60s.`);
+  }
+
+  startCountdown(60);
+}
+
+// Arranque
+init();
+</script>
+</body>
+</html>
